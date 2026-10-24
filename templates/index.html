@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph Map Explorer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f2f3ee;
+      color: #1f2a25;
+    }
+
+    /* ---------- Top bar ---------- */
+    header {
+      background: #f7f8f4;
+      border-bottom: 1px solid #e0e2da;
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: #1d4d3c; display: flex; align-items: center; justify-content: center;
+    }
+    .brand small { display: block; font-size: 9px; letter-spacing: 1px; color: #6b7a72; }
+    .brand h1 { margin: 0; font-size: 18px; }
+    #resetBtn {
+      border: 1px solid #c9cdc4; background: white; border-radius: 10px;
+      padding: 9px 18px; font-size: 14px; cursor: pointer;
+    }
+    #resetBtn:hover { background: #eef1ea; }
+
+    /* ---------- Three cards ---------- */
+    .layout {
+      display: grid;
+      grid-template-columns: 290px 1fr 290px;
+      gap: 16px;
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 16px 24px 40px 24px;
+      align-items: start;
+    }
+    .card {
+      background: white; border: 1px solid #e3e5dd; border-radius: 16px; padding: 18px;
+    }
+
+    .step-title { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+    .badge {
+      width: 24px; height: 24px; border-radius: 50%; background: #1d4d3c; color: white;
+      font-size: 12px; font-weight: bold; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; margin-top: 1px;
+    }
+    .step-title b { display: block; font-size: 15px; }
+    .step-title span { font-size: 12px; color: #77837c; }
+
+    .field-label { font-size: 10px; letter-spacing: 1px; color: #6b7a72; margin: 12px 0 6px; }
+    select {
+      width: 100%; padding: 11px 12px; font-size: 15px; border: 1px solid #cfd3ca;
+      border-radius: 10px; background: white; color: #1f2a25;
+    }
+    hr { border: none; border-top: 1px solid #e6e8e0; margin: 20px 0; }
+
+    .algo {
+      display: block; width: 100%; text-align: left; background: white;
+      border: 1px solid #cfd3ca; border-radius: 10px; padding: 11px 12px;
+      margin-bottom: 10px; cursor: pointer; font-family: inherit;
+    }
+    .algo:hover { border-color: #1d4d3c; background: #f4f9f6; }
+    .algo b { display: block; font-size: 13px; margin-bottom: 3px; color: #1f2a25; }
+    .algo small { font-size: 11px; color: #77837c; }
+
+    .tip {
+      background: #fff3d3; border: 1px solid #f3e2a9; border-radius: 10px;
+      padding: 11px 12px; font-size: 11px; color: #5c5333; margin-top: 16px;
+    }
+    .tip b { display: block; margin-bottom: 4px; font-size: 11px; }
+
+    /* ---------- Map card ---------- */
+    .eyebrow { font-size: 9px; letter-spacing: 1px; color: #6b7a72; }
+    .map-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+    .map-head h2 { margin: 2px 0 0; font-size: 20px; }
+    .legend { font-size: 11px; color: #6b7a72; display: flex; gap: 12px; align-items: center; }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+    .line { display: inline-block; width: 12px; height: 3px; margin-right: 4px; vertical-align: middle; }
+    canvas { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid #e3e5dd; }
+
+    /* ---------- Result card ---------- */
+    .result-empty { text-align: center; padding: 26px 8px 20px; color: #77837c; font-size: 12px; }
+    .result-icon {
+      width: 46px; height: 46px; border-radius: 50%; background: #eef0ea;
+      margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;
+    }
+    .result-empty b { display: block; color: #1f2a25; font-size: 14px; margin-bottom: 4px; }
+    .tile { background: #f6f7f3; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+    .tile small { font-size: 10px; letter-spacing: 1px; color: #6b7a72; }
+    .tile .big { font-size: 24px; font-weight: bold; color: #1d4d3c; }
+    .path-text { font-size: 12px; line-height: 1.6; word-break: break-word; }
+    .status { font-size: 13px; color: #1d4d3c; font-weight: bold; margin-bottom: 8px; }
+
+    @media (max-width: 950px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/>
+          <path d="M12 7.5 L6 17 M12 7.5 L18 17 M7.5 19 H16.5"/>
+        </svg>
+      </div>
+      <div>
+        <small>PATHFINDING VISUALIZER</small>
+        <h1>Graph Map Explorer</h1>
+      </div>
+    </div>
+    <button id="resetBtn" onclick="resetAll()">Reset</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- LEFT CARD -->
+    <div class="card">
+      <div class="step-title">
+        <div class="badge">1</div>
+        <div><b>Choose two vertices</b><span>Select where the route starts and ends.</span></div>
+      </div>
+
+      <div class="field-label">START VERTEX</div>
+      <select id="startSelect"></select>
+      <div class="field-label">GOAL VERTEX</div>
+      <select id="goalSelect"></select>
+
+      <hr>
+
+      <div class="step-title">
+        <div class="badge">2</div>
+        <div><b>Pick an algorithm</b><span>Press a button to find and draw the route.</span></div>
+      </div>
+
+      <button class="algo" onclick="runSearch('astar')">
+        <b>A* Search</b><small>Balances distance traveled with distance left.</small></button>
+      <button class="algo" onclick="runSearch('uniform')">
+        <b>Uniform Cost</b><small>Always expands the cheapest route so far.</small></button>
+      <button class="algo" onclick="runSearch('greedy')">
+        <b>Greedy Search</b><small>Moves toward the goal as directly as possible.</small></button>
+
+      <div class="tip">
+        <b>Beginner tip</b>
+        Try the same start and goal with all three buttons. Compare how many vertices each one visits.
+      </div>
+    </div>
+
+    <!-- MIDDLE CARD: the map -->
+    <div class="card">
+      <div class="map-head">
+        <div>
+          <div class="eyebrow">FIXED GRAPH</div>
+          <h2>Route map</h2>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:#1a9a6c"></i>Start</span>
+          <span><i class="dot" style="background:#e8622c"></i>Goal</span>
+          <span><i class="line" style="background:#e8622c"></i>Route</span>
+          <span><i class="dot" style="background:#4a90d9"></i>Checked</span>
+        </div>
+      </div>
+      <canvas id="mapCanvas"></canvas>
+    </div>
+
+    <!-- RIGHT CARD -->
+    <div class="card">
+      <div class="step-title">
+        <div class="badge">3</div>
+        <div><b>Read the result</b><span>The orange line is the route found.</span></div>
+      </div>
+      <div id="result">
+        <div class="result-empty">
+          <div class="result-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#77837c" stroke-width="2">
+              <circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8 16.5 L16 7.5"/>
+            </svg>
+          </div>
+          <b>No route yet</b>
+          Complete steps 1 and 2 to see a result.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  
+  var STEP_DELAY = 1000;   
+  var NAMES = { astar: "A* Search", uniform: "Uniform Cost", greedy: "Greedy Search" };
+
+  
+  var canvas = document.getElementById("mapCanvas");
+  var ctx = canvas.getContext("2d");
+  var mapImage = new Image();
+  mapImage.src = "/PNG/map.png";
+
+  var vertices = [];       
+  var edges = [];          
+  var checked = [];        
+  var checkedEdges = [];   
+  var current = null;      
+  var route = [];          
+  var runId = 0;           
+
+  function getVertex(name) {
+    for (var i = 0; i < vertices.length; i++) {
+      if (vertices[i].name === name) return vertices[i];
+    }
+  }
+
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+
+  function drawLine(nameA, nameB, color, width) {
+    var a = getVertex(nameA);
+    var b = getVertex(nameB);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  function draw() {
+    ctx.drawImage(mapImage, 0, 0);
+
+
+    for (var i = 0; i < edges.length; i++) {
+      drawLine(edges[i][0], edges[i][1], "#4a4f4c", 3);
+    }
+
+    for (var k = 0; k < checkedEdges.length; k++) {
+      drawLine(checkedEdges[k][0], checkedEdges[k][1], "#4a90d9", 6);
+    }
+
+    for (var r = 0; r < route.length - 1; r++) {
+      drawLine(route[r], route[r + 1], "#e8622c", 7);
+    }
+
+    var start = document.getElementById("startSelect").value;
+    var goal = document.getElementById("goalSelect").value;
+
+    for (var j = 0; j < vertices.length; j++) {
+      var v = vertices[j];
+      var color = "#555a57";
+      if (checked.indexOf(v.name) !== -1) color = "#4a90d9";
+      if (v.name === start) color = "#1a9a6c";
+      if (v.name === goal) color = "#e8622c";
+
+      if (v.name === current) {
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 17, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 210, 0, 0.55)";
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(v.x, v.y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = "#2b2f2d";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = "bold 14px Arial";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "white";
+      ctx.strokeText(v.name, v.x, v.y - 15);
+      ctx.fillStyle = "#1f2a25";
+      ctx.fillText(v.name, v.x, v.y - 15);
+    }
+  }
+
+  function showEmptyResult() {
+    document.getElementById("result").innerHTML =
+      '<div class="result-empty"><div class="result-icon">' +
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#77837c" stroke-width="2">' +
+      '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8 16.5 L16 7.5"/></svg>' +
+      '</div><b>No route yet</b>Complete steps 1 and 2 to see a result.</div>';
+  }
+
+  function clearVisuals() {
+    checked = [];
+    checkedEdges = [];
+    current = null;
+    route = [];
+  }
+
+  async function runSearch(algorithm) {
+    runId = runId + 1;
+    var myRun = runId;
+    clearVisuals();
+    draw();
+
+    var start = document.getElementById("startSelect").value;
+    var goal = document.getElementById("goalSelect").value;
+    var url = "/api/route?start=" + start + "&goal=" + goal + "&algorithm=" + algorithm;
+
+    var response = await fetch(url);
+    var data = await response.json();
+    var box = document.getElementById("result");
+
+    for (var i = 0; i < data.steps.length; i++) {
+      if (myRun !== runId) return;   
+
+      var step = data.steps[i];
+      current = step.vertex;
+      checked.push(step.vertex);
+      if (step.from !== null) {
+        checkedEdges.push([step.from, step.vertex]);
+      }
+
+      box.innerHTML =
+        '<div class="status">' + NAMES[algorithm] + ' is searching...</div>' +
+        '<div class="tile"><small>NOW CHECKING</small><div class="big">' + step.vertex + '</div></div>' +
+        '<div class="tile"><small>STEP</small><div class="big">' + (i + 1) + ' / ' + data.steps.length + '</div></div>';
+      draw();
+
+      await sleep(STEP_DELAY);   
+    }
+
+    if (myRun !== runId) return;
+    current = null;
+
+    if (data.found) {
+      route = data.path;
+      box.innerHTML =
+        '<div class="status">' + NAMES[algorithm] + ' finished</div>' +
+        '<div class="tile"><small>VERTICES CHECKED</small><div class="big">' + data.steps.length + '</div></div>' +
+        '<div class="tile"><small>ROUTE LENGTH</small><div class="big">' + data.distance + ' px</div></div>' +
+        '<div class="tile"><small>PATH</small><div class="path-text">' + data.path.join(" &rarr; ") + '</div></div>';
+    } else {
+      box.innerHTML = '<div class="result-empty"><b>No route found</b>These two vertices are not connected.</div>';
+    }
+    draw();
+  }
+
+  function resetAll() {
+    runId = runId + 1;   
+    clearVisuals();
+    document.getElementById("startSelect").value = "V1";
+    document.getElementById("goalSelect").value = "V27";
+    showEmptyResult();
+    draw();
+  }
+
+ 
+  mapImage.onload = function () {
+    canvas.width = mapImage.width;
+    canvas.height = mapImage.height;
+
+    fetch("/api/graph")
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        vertices = data.vertices;
+        edges = data.edges;
+
+        var startSelect = document.getElementById("startSelect");
+        var goalSelect = document.getElementById("goalSelect");
+        for (var i = 0; i < vertices.length; i++) {
+          startSelect.add(new Option(vertices[i].name, vertices[i].name));
+          goalSelect.add(new Option(vertices[i].name, vertices[i].name));
+        }
+        startSelect.value = "V1";
+        goalSelect.value = "V27";
+
+        
+        startSelect.onchange = function () { runId++; clearVisuals(); showEmptyResult(); draw(); };
+        goalSelect.onchange = function () { runId++; clearVisuals(); showEmptyResult(); draw(); };
+        draw();
+      });
+  };
+</script>
+</body>
+</html>
