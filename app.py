@@ -11,22 +11,22 @@ class Vertex:
 
 class Graph:
     def __init__(self, size):
+        self.adj_matrix = [[0] * size for _ in range(size)]
         self.size = size
         self.vertices = []
-        self.adj_matrix = [[0] * size for _ in range(size)]
 
-    def add_vertex(self, vertex):
-        self.vertices.append(vertex)
+    def add_vertex(self, v):
+        self.vertices.append(v)
 
-    def add_edge(self, name1, name2):
-        i = self.index_of(name1)
-        j = self.index_of(name2)
+    def add_edge(self, v1, v2):
+        i = self.index_of(v1)
+        j = self.index_of(v2)
         self.adj_matrix[i][j] = 1
         self.adj_matrix[j][i] = 1
 
-    def index_of(self, name):
+    def index_of(self, v):
         for i in range(len(self.vertices)):
-            if self.vertices[i].value == name:
+            if self.vertices[i] == v:
                 return i
         return -1
 
@@ -79,14 +79,14 @@ edge_data = [
 ]
 
 graph = Graph(len(vertex_data))
-for name, x, y in vertex_data:
-    graph.add_vertex(Vertex(name, x, y))
-for name1, name2 in edge_data:
-    graph.add_edge(name1, name2)
+for v, x, y in vertex_data:
+    graph.add_vertex(Vertex(v, x, y))
+for v1, v2 in edge_data:
+    graph.add_edge(v1, v2)
 
-def find_route(start_name, goal_name, algorithm):
-    start = graph.index_of(start_name)
-    goal = graph.index_of(goal_name)
+def find_route(start_v, goal_v, algorithm):
+    start = graph.index_of(start_v)
+    goal = graph.index_of(goal_v)
 
     queue = [(0, start)]           
     came_from = {start: None}       
@@ -125,7 +125,7 @@ def find_route(start_name, goal_name, algorithm):
                     came_from[n] = current
                     if algorithm == "astar":
                         heapq.heappush(queue, (new_cost + left, n))
-                    else:  # uniform cost
+                    else:  
                         heapq.heappush(queue, (new_cost, n))
 
     if goal not in came_from:
